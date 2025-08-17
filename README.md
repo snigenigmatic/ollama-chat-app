@@ -1,5 +1,7 @@
 # Simple LLM Chat Application using React + Vite + TS and Rust + Ollama
 
+This is a starter package of sorts for me to build projects with Rust. Hope you enjoy!
+
 ## Motivations
 - I love Python, but it seems monotonous, it is simple and straightforward; THIS was a challange!
 - Rust makes you feel one with your system irrespetive of wether you are just builing a https server ir a 3D game engine
