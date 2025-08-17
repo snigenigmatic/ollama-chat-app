@@ -1,7 +1,29 @@
 import { useState, useRef, useEffect } from "react";
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import ReactMarkdown from 'react-markdown';
 import "./App.css";
 
 type Msg = { role: string; content: string };
+
+function CodeBlock({ language, code }: { language: string, code: string }) {
+  return (
+    <div className="code-block-wrapper">
+      <div className="code-block-header">
+        <span>{language || 'code'}</span>
+        <button
+          onClick={() => navigator.clipboard.writeText(code)}
+          className="copy-btn"
+        >
+          Copy
+        </button>
+      </div>
+      <SyntaxHighlighter language={language} style={vscDarkPlus} customStyle={{ margin: 0, borderRadius: '0 0 8px 8px' }} PreTag="div">
+        {code}
+      </SyntaxHighlighter>
+    </div>
+  );
+}
 
 export default function App() {
   const [messages, setMessages] = useState<Msg[]>(() => {
@@ -176,18 +198,29 @@ export default function App() {
               <div className={`message-bubble ${m.role === "user" ? "user" : "assistant"}`}>
                 {m.content.includes('```') ? (
                   m.content.split(/```([a-zA-Z0-9]*)\n?([\s\S]*?)```/).map((part, idx) => {
-                    if (idx % 3 === 0) return <span key={idx}>{part}</span>;
-                    if (idx % 3 === 1) return null;
-                    return <pre key={idx} className="code-block"><code>{part}</code></pre>;
+                    if (idx % 3 === 0) return <ReactMarkdown key={idx}>{part}</ReactMarkdown>;
+                    if (idx % 3 === 1) return null; // This is the language identifier, we'll use it in the next part
+                    const lang = m.content.split(/```([a-zA-Z0-9]*)\n?([\s\S]*?)```/)[idx - 1];
+                    return <CodeBlock key={idx} language={lang} code={part} />;
                   })
                 ) : (
-                  <span>{m.content}</span>
+                  <ReactMarkdown>{m.content}</ReactMarkdown>
                 )}
                  {m.role === 'user' && !busy && (
                   <button onClick={() => startEdit(i)} className="edit-btn" title="Edit">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
                   </button>
                 )}
+                <button 
+                  onClick={() => navigator.clipboard.writeText(m.content)} 
+                  className="message-copy-btn" 
+                  title="Copy message"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                    <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.121A1.5 1.5 0 0117 6.621V16.5a1.5 1.5 0 01-1.5 1.5h-7A1.5 1.5 0 017 16.5v-13z" />
+                    <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-2.25a.75.75 0 00-1.5 0v2.25a.5.5 0 01-.5.5h-7a.5.5 0 01-.5-.5v-9a.5.5 0 01.5-.5h2.25a.75.75 0 000-1.5H4.5z" />
+                  </svg>
+                </button>
               </div>
             </div>
           ))}
@@ -213,7 +246,7 @@ export default function App() {
                 title={editingIndex !== null ? "Update" : "Send"}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M3.105 2.289a.75.75 0 00-.826.95l1.414 4.949a.75.75 0 00.95.544l3.252-.928A.75.75 0 019 8.252v.021l-3.252.928a.75.75 0 00-.95.544l-1.414 4.949a.75.75 0 00.826.95l13.238-3.782a.75.75 0 000-1.418L3.105 2.289z" />
+                  <path d="M3.105 2.289a.75.75 0 00-.826.95l1.414 4.949a.75.75 0 00.95.544l3.252-.928A.75.75 0 009 8.252v.021l-3.252.928a.75.75 0 00-.95.544l-1.414 4.949a.75.75 0 00.826.95l13.238-3.782a.75.75 0 000-1.418L3.105 2.289z" />
                 </svg>
               </button>
               {busy && (
