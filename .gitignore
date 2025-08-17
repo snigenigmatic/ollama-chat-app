@@ -1,0 +1,23 @@
+# Rust / Cargo
+target/
+Cargo.lock
+*.rs.bk
+*.pdb
+
+# Node.js / Vite
+node_modules/
+dist/
+.env
+.env.*
+*.local
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Operating System
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
