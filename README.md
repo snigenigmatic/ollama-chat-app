@@ -75,3 +75,10 @@ npm install
 npm run dev
 ```
 The application will be available at the URL provided (usually `http://localhost:5173`).
+
+## Example Run
+
+<div align="center">
+    <img src="./assets/ollama-chat-demo.png" alt="Ollama Chat Application Demo" width="800" />
+    <p><em>Ollama Chat Application running with llama3:8b model</em></p>
+</div>
