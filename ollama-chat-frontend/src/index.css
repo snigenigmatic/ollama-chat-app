@@ -1,16 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap');
+
 :root {
-  --background: #121212;
-  --surface: #1e1e1e;
-  --primary-text: #e0e0e0;
-  --secondary-text: #a0a0a0;
-  --border-color: #333333;
-  --accent-color: #007acc;
-  --accent-hover: #0099ff;
-  --user-bubble: #004a7c;
-  --code-background: #282c34;
-  --error-color: #cf6679;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", monospace;
+  --background-start-rgb: 15, 23, 42;
+  --background-end-rgb: 30, 41, 59;
+  --surface-color: rgba(255, 255, 255, 0.03);
+  --primary-text: #e2e8f0;
+  --secondary-text: #94a3b8;
+  --border-color: rgba(255, 255,255, 0.1);
+  --accent-color: #38bdf8;
+  --accent-hover: #7dd3fc;
+  --user-bubble-bg: #0ea5e9;
+  --user-bubble-text: #ffffff;
+  --code-background: #0f172a;
+  --error-color: #f43f5e;
+
+  --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'Source Code Pro', 'JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", monospace;
 }
 
 html, body, #root {
@@ -19,12 +24,13 @@ html, body, #root {
 }
 
 body {
-  background-color: var(--background);
+  background: radial-gradient(ellipse at top, rgb(var(--background-start-rgb)), rgb(var(--background-end-rgb)));
   font-family: var(--font-sans);
   color: var(--primary-text);
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
 
 
