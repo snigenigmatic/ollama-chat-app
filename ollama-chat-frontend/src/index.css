@@ -1,18 +1,30 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap');
 
 :root {
-  --background-start-rgb: 15, 23, 42;
-  --background-end-rgb: 30, 41, 59;
-  --surface-color: rgba(255, 255, 255, 0.03);
-  --primary-text: #e2e8f0;
-  --secondary-text: #94a3b8;
-  --border-color: rgba(255, 255,255, 0.1);
-  --accent-color: #38bdf8;
-  --accent-hover: #7dd3fc;
-  --user-bubble-bg: #0ea5e9;
+  --background-start-rgb: 12, 14, 22;
+  --background-end-rgb: 20, 24, 35;
+  --surface-color: rgba(255, 255, 255, 0.05);
+  --surface-elevated: rgba(255, 255, 255, 0.08);
+  --primary-text: #f8fafc;
+  --secondary-text: #cbd5e1;
+  --tertiary-text: #94a3b8;
+  --border-color: rgba(148, 163, 184, 0.12);
+  --border-elevated: rgba(148, 163, 184, 0.2);
+  --accent-color: #8b5cf6;
+  --accent-hover: #a78bfa;
+  --accent-light: rgba(139, 92, 246, 0.1);
+  --user-bubble-bg: linear-gradient(135deg, #8b5cf6, #7c3aed);
   --user-bubble-text: #ffffff;
+  --assistant-bubble-bg: rgba(255, 255, 255, 0.04);
   --code-background: #0f172a;
-  --error-color: #f43f5e;
+  --error-color: #f87171;
+  --success-color: #34d399;
+  --warning-color: #fbbf24;
+  
+  --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-medium: 0 8px 24px rgba(0, 0, 0, 0.25);
+  --shadow-large: 0 16px 48px rgba(0, 0, 0, 0.4);
+  --glow-accent: 0 0 20px rgba(139, 92, 246, 0.3);
 
   --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'Source Code Pro', 'JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', "Liberation Mono", "Courier New", monospace;
@@ -25,11 +37,13 @@ html, body, #root {
 
 body {
   background: radial-gradient(ellipse at top, rgb(var(--background-start-rgb)), rgb(var(--background-end-rgb)));
+  background-attachment: fixed;
   font-family: var(--font-sans);
   color: var(--primary-text);
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
 }
 
 

@@ -6,6 +6,19 @@ import "./App.css";
 
 type Msg = { role: string; content: string };
 
+type Conversation = {
+  id: string;
+  title: string;
+  messages: Msg[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type ChatData = {
+  conversations: Conversation[];
+  activeConversationId: string | null;
+};
+
 function CodeBlock({ language, code }: { language: string, code: string }) {
   return (
     <div className="code-block-wrapper">
@@ -25,25 +38,149 @@ function CodeBlock({ language, code }: { language: string, code: string }) {
   );
 }
 
+// Migration and utility functions
+function generateId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+function generateTitle(messages: Msg[]): string {
+  const firstUserMessage = messages.find(m => m.role === 'user');
+  if (!firstUserMessage) return 'New Chat';
+  
+  const preview = firstUserMessage.content.slice(0, 50);
+  return preview.length < firstUserMessage.content.length ? `${preview}...` : preview;
+}
+
+function migrateLegacyData(): ChatData {
+  const legacyData = localStorage.getItem("chatHistory");
+  
+  if (!legacyData) {
+    return { conversations: [], activeConversationId: null };
+  }
+
+  try {
+    const parsed = JSON.parse(legacyData);
+    
+    // Check if it's already in new format
+    if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && 'id' in parsed[0]) {
+      // It's already conversations array, wrap it
+      return {
+        conversations: parsed.map((conv: any) => ({
+          ...conv,
+          createdAt: new Date(conv.createdAt || Date.now()),
+          updatedAt: new Date(conv.updatedAt || Date.now())
+        })),
+        activeConversationId: parsed[0]?.id || null
+      };
+    }
+    
+    // Check if it's ChatData format
+    if (parsed.conversations && Array.isArray(parsed.conversations)) {
+      return {
+        conversations: parsed.conversations.map((conv: any) => ({
+          ...conv,
+          createdAt: new Date(conv.createdAt || Date.now()),
+          updatedAt: new Date(conv.updatedAt || Date.now())
+        })),
+        activeConversationId: parsed.activeConversationId
+      };
+    }
+    
+    // It's legacy message array format
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      const now = new Date();
+      const conversation: Conversation = {
+        id: generateId(),
+        title: generateTitle(parsed),
+        messages: parsed,
+        createdAt: now,
+        updatedAt: now
+      };
+      
+      return {
+        conversations: [conversation],
+        activeConversationId: conversation.id
+      };
+    }
+    
+    return { conversations: [], activeConversationId: null };
+  } catch (error) {
+    console.warn('Failed to migrate legacy chat data:', error);
+    return { conversations: [], activeConversationId: null };
+  }
+}
+
+function saveChatData(data: ChatData): void {
+  localStorage.setItem("chatHistory", JSON.stringify(data));
+}
+
 export default function App() {
-  const [messages, setMessages] = useState<Msg[]>(() => {
-    const saved = localStorage.getItem("chatHistory");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [chatData, setChatData] = useState<ChatData>(() => migrateLegacyData());
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
   const bufferRef = useRef("");
   const flushTimerRef = useRef<number | null>(null);
   const chatRef = useRef<HTMLDivElement | null>(null);
 
+  // Get current conversation
+  const activeConversation = chatData.conversations.find(c => c.id === chatData.activeConversationId);
+  const messages = activeConversation?.messages || [];
+
   useEffect(() => {
-    localStorage.setItem("chatHistory", JSON.stringify(messages));
+    saveChatData(chatData);
     if (chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [chatData]);
+
+  // Conversation management functions
+  function createNewConversation(): void {
+    const now = new Date();
+    const newConversation: Conversation = {
+      id: generateId(),
+      title: 'New Chat',
+      messages: [],
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    setChatData(prev => ({
+      conversations: [newConversation, ...prev.conversations],
+      activeConversationId: newConversation.id
+    }));
+  }
+
+  function switchConversation(conversationId: string): void {
+    setChatData(prev => ({
+      ...prev,
+      activeConversationId: conversationId
+    }));
+  }
+
+  function updateConversationTitle(conversationId: string, newTitle: string): void {
+    setChatData(prev => ({
+      ...prev,
+      conversations: prev.conversations.map(conv =>
+        conv.id === conversationId
+          ? { ...conv, title: newTitle, updatedAt: new Date() }
+          : conv
+      )
+    }));
+  }
+
+  function updateConversationMessages(conversationId: string, messages: Msg[]): void {
+    setChatData(prev => ({
+      ...prev,
+      conversations: prev.conversations.map(conv =>
+        conv.id === conversationId
+          ? { ...conv, messages, updatedAt: new Date() }
+          : conv
+      )
+    }));
+  }
 
   function startEdit(index: number) {
     if (busy) return;
@@ -57,18 +194,50 @@ export default function App() {
   async function send() {
     if (!input.trim() || busy) return;
     
+    // Ensure we have an active conversation
+    let activeId = chatData.activeConversationId;
+    let currentMessages = messages;
+    
+    if (!activeId || !chatData.conversations.find(c => c.id === activeId)) {
+      // Create new conversation
+      const now = new Date();
+      const newConversation: Conversation = {
+        id: generateId(),
+        title: 'New Chat',
+        messages: [],
+        createdAt: now,
+        updatedAt: now
+      };
+      
+      activeId = newConversation.id;
+      currentMessages = [];
+      
+      // Update state with new conversation
+      setChatData(prev => ({
+        conversations: [newConversation, ...prev.conversations],
+        activeConversationId: newConversation.id
+      }));
+    }
+    
     let nextMessages: Msg[];
     if (editingIndex !== null) {
       // We are editing a message. We'll replace the user message
       // and remove all subsequent messages.
-      nextMessages = messages.slice(0, editingIndex + 1);
+      nextMessages = currentMessages.slice(0, editingIndex + 1);
       nextMessages[editingIndex] = { ...nextMessages[editingIndex], content: input };
     } else {
       // It's a new message.
-      nextMessages = [...messages, { role: "user", content: input }];
+      nextMessages = [...currentMessages, { role: "user", content: input }];
     }
 
-    setMessages(nextMessages);
+    // Update the conversation with new messages
+    updateConversationMessages(activeId, nextMessages);
+    
+    // Update title if this is the first user message
+    if (nextMessages.length === 1 && nextMessages[0].role === 'user') {
+      updateConversationTitle(activeId, generateTitle(nextMessages));
+    }
+    
     setInput("");
     setBusy(true);
     setEditingIndex(null);
@@ -92,13 +261,13 @@ export default function App() {
       if (!res.ok || !res.body) {
         const text = await res.text();
         const assistantMsg: Msg = { role: "assistant", content: `Error: ${res.status} ${res.statusText} - ${text}` };
-        setMessages([...nextMessages, assistantMsg]);
+        updateConversationMessages(activeId, [...nextMessages, assistantMsg]);
         setBusy(false);
         return;
       }
 
       const assistantIndex = nextMessages.length;
-      setMessages([...nextMessages, { role: "assistant", content: "" }]);
+      updateConversationMessages(activeId, [...nextMessages, { role: "assistant", content: "" }]);
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -108,11 +277,28 @@ export default function App() {
       const flushBuffer = () => {
         const txt = bufferRef.current;
         if (!txt) return;
-        setMessages(prev => {
-          const copy = prev.slice();
-          copy[assistantIndex] = { role: "assistant", content: (copy[assistantIndex]?.content || "") + txt };
-          return copy;
+        
+        // Get current conversation to update messages
+        setChatData(prev => {
+          const activeConv = prev.conversations.find(c => c.id === activeId);
+          if (!activeConv) return prev;
+          
+          const updatedMessages = [...activeConv.messages];
+          updatedMessages[assistantIndex] = { 
+            role: "assistant", 
+            content: (updatedMessages[assistantIndex]?.content || "") + txt 
+          };
+          
+          return {
+            ...prev,
+            conversations: prev.conversations.map(conv =>
+              conv.id === activeId
+                ? { ...conv, messages: updatedMessages, updatedAt: new Date() }
+                : conv
+            )
+          };
         });
+        
         bufferRef.current = "";
         if (flushTimerRef.current) {
           window.clearTimeout(flushTimerRef.current);
@@ -163,7 +349,11 @@ export default function App() {
     } catch (e: any) {
       const isAbort = e?.name === 'AbortError' || e?.message?.toLowerCase()?.includes('aborted');
       const assistantMsg: Msg = { role: "assistant", content: isAbort ? "[cancelled]" : `Network error: ${e?.message ?? String(e)}` };
-      setMessages(prev => [...prev.slice(0, nextMessages.length), assistantMsg]);
+      
+      // Get current conversation and update with error message
+      const currentConv = chatData.conversations.find(c => c.id === activeId);
+      const currentMessages = currentConv?.messages || nextMessages;
+      updateConversationMessages(activeId, [...currentMessages.slice(0, nextMessages.length), assistantMsg]);
     } finally {
       setBusy(false);
       controllerRef.current = null;
@@ -187,7 +377,61 @@ export default function App() {
   }
 
   return (
-    <div className="app-container">
+    <div className="app-layout">
+      {/* Sidebar */}
+      <div className="sidebar">
+        <div className="sidebar-header">
+          <button onClick={createNewConversation} className="new-chat-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+            </svg>
+            New Chat
+          </button>
+        </div>
+        
+        <div className="conversations-list">
+          {chatData.conversations.map((conversation) => (
+            <div
+              key={conversation.id}
+              className={`conversation-item ${conversation.id === chatData.activeConversationId ? 'active' : ''}`}
+              onClick={() => switchConversation(conversation.id)}
+            >
+              {editingTitle === conversation.id ? (
+                <input
+                  className="title-edit-input"
+                  value={conversation.title}
+                  onChange={(e) => updateConversationTitle(conversation.id, e.target.value)}
+                  onBlur={() => setEditingTitle(null)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') setEditingTitle(null);
+                    if (e.key === 'Escape') setEditingTitle(null);
+                  }}
+                  autoFocus
+                />
+              ) : (
+                <>
+                  <span className="conversation-title">{conversation.title}</span>
+                  <button
+                    className="edit-title-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingTitle(conversation.id);
+                    }}
+                    title="Edit title"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="app-container">
         <div className="app-header">
           <div className="app-title">Ollama Chat</div>
           <div className="app-sub">Local LLM playground</div>
@@ -263,5 +507,6 @@ export default function App() {
             </div>
           </div>
       </div>
+    </div>
   );
 }
